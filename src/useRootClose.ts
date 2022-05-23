@@ -24,6 +24,57 @@ function isModifiedEvent(event: MouseEvent) {
   return !!(event.metaKey || event.altKey || event.ctrlKey || event.shiftKey);
 }
 
+function addDocEventListeners(
+  currentEvent: Event | undefined,
+  doc: any,
+  clickTrigger: MouseEvents,
+  handleMouseCapture: (e: any) => void,
+  handleMouse: (e: any) => void,
+  handleKeyUp: (e: any) => void,
+) {
+  // Use capture for this listener so it fires before React's listener, to
+  // avoid false positives in the contains() check below if the target DOM
+  // element is removed in the React mouse callback.
+  const removeMouseCaptureListener = listen(
+    doc,
+    clickTrigger,
+    handleMouseCapture,
+    true,
+  );
+
+  const removeMouseListener = listen(doc, clickTrigger, (e) => {
+    // skip if this event is the same as the one running when we added the handlers
+    if (e === currentEvent) {
+      currentEvent = undefined;
+      return;
+    }
+    handleMouse(e);
+  });
+
+  const removeKeyupListener = listen(doc, 'keyup', (e) => {
+    // skip if this event is the same as the one running when we added the handlers
+    if (e === currentEvent) {
+      currentEvent = undefined;
+      return;
+    }
+    handleKeyUp(e);
+  });
+
+  let mobileSafariHackListeners = [] as Array<() => void>;
+  if ('ontouchstart' in doc.documentElement) {
+    mobileSafariHackListeners = [].slice
+      .call(doc.body.children)
+      .map((el) => listen(el, 'mousemove', noop));
+  }
+
+  return () => {
+    removeMouseCaptureListener();
+    removeMouseListener();
+    removeKeyupListener();
+    mobileSafariHackListeners.forEach((remove) => remove());
+  };
+}
+
 const getRefTarget = (
   ref: React.RefObject<Element> | Element | null | undefined,
 ) => ref && ('current' in ref ? ref.current : ref);
@@ -53,7 +104,7 @@ function useRootClose(
   const onClose = onRootClose || noop;
 
   const handleMouseCapture = useCallback(
-    (e) => {
+    (e: any) => {
       const currentTarget = getRefTarget(ref);
 
       warning(
@@ -66,7 +117,8 @@ function useRootClose(
         !currentTarget ||
         isModifiedEvent(e) ||
         !isLeftClickEvent(e) ||
-        !!contains(currentTarget, e.target);
+        (!!contains(currentTarget, e.target) &&
+          currentTarget.getRootNode() === e.target.getRootNode());
     },
     [ref],
   );
@@ -88,51 +140,32 @@ function useRootClose(
 
     // Store the current event to avoid triggering handlers immediately
     // https://github.com/facebook/react/issues/20074
-    let currentEvent = window.event;
+    const currentEvent = window.event;
 
-    const doc = ownerDocument(getRefTarget(ref));
-
-    // Use capture for this listener so it fires before React's listener, to
-    // avoid false positives in the contains() check below if the target DOM
-    // element is removed in the React mouse callback.
-    const removeMouseCaptureListener = listen(
-      doc as any,
+    const refTarget = getRefTarget(ref);
+    const removeDocEventListeners = addDocEventListeners(
+      currentEvent,
+      ownerDocument(refTarget),
       clickTrigger,
       handleMouseCapture,
-      true,
+      handleMouse,
+      handleKeyUp,
     );
-
-    const removeMouseListener = listen(doc as any, clickTrigger, (e) => {
-      // skip if this event is the same as the one running when we added the handlers
-      if (e === currentEvent) {
-        currentEvent = undefined;
-        return;
-      }
-      handleMouse(e);
-    });
-
-    const removeKeyupListener = listen(doc as any, 'keyup', (e) => {
-      // skip if this event is the same as the one running when we added the handlers
-      if (e === currentEvent) {
-        currentEvent = undefined;
-        return;
-      }
-      handleKeyUp(e);
-    });
-
-    let mobileSafariHackListeners = [] as Array<() => void>;
-    if ('ontouchstart' in doc.documentElement) {
-      mobileSafariHackListeners = [].slice
-        .call(doc.body.children)
-        .map((el) => listen(el, 'mousemove', noop));
+    if (refTarget && refTarget.getRootNode() instanceof ShadowRoot) {
+      const removeShadowRootEventListeners = addDocEventListeners(
+        currentEvent,
+        refTarget.getRootNode(),
+        clickTrigger,
+        handleMouseCapture,
+        handleMouse,
+        handleKeyUp,
+      );
+      return () => {
+        removeDocEventListeners();
+        removeShadowRootEventListeners();
+      };
     }
-
-    return () => {
-      removeMouseCaptureListener();
-      removeMouseListener();
-      removeKeyupListener();
-      mobileSafariHackListeners.forEach((remove) => remove());
-    };
+    return removeDocEventListeners;
   }, [
     ref,
     disabled,
