@@ -60,10 +60,11 @@ function addDocEventListeners(
     handleKeyUp(e);
   });
 
+  const thisDocumentElement = doc.ownerDocument?.documentElement || doc.documentElement;
   let mobileSafariHackListeners = [] as Array<() => void>;
-  if ('ontouchstart' in doc.documentElement) {
+  if ('ontouchstart' in thisDocumentElement) {
     mobileSafariHackListeners = [].slice
-      .call(doc.body.children)
+      .call(doc.children || doc.body.children)
       .map((el) => listen(el, 'mousemove', noop));
   }
 
