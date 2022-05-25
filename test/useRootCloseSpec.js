@@ -60,7 +60,7 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
 
       return (
         <div ref={ref} id="my-div">
-          hello there
+          <p>hello there</p>
         </div>
       );
     }
@@ -122,6 +122,21 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
       expect(spy).to.not.have.been.called;
 
       simulant.fire(document.body, eventName);
+
+      expect(spy).to.not.have.been.called;
+    });
+
+    it('should not close when clicked inside', () => {
+      let spy = sinon.spy();
+      mount(
+        <Wrapper onRootClose={spy} />,
+        { attachTo: config.useShadowRoot ? attachTo.shadowRoot : attachTo }
+      );
+
+      simulant.fire(
+        config.useShadowRoot ? attachTo.shadowRoot.getElementById('my-div').children[0] : document.getElementById('my-div').children[0],
+        eventName
+      );
 
       expect(spy).to.not.have.been.called;
     });
