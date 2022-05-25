@@ -17,6 +17,22 @@ const configs = [
     useShadowRoot: true 
   },
 ]
+// Wrap simulant's created event to add composed: true.
+const fire = (node, event, params) => {
+  const simulatedEvent = simulant(event, params);
+  const fixedEvent = new simulatedEvent.constructor(
+    simulatedEvent.type,
+    {
+      bubbles: simulatedEvent.bubbles,
+      button: simulatedEvent.button,
+      cancelable: simulatedEvent.cancelable,
+      composed: true,
+    },
+  );
+  fixedEvent.keyCode = simulatedEvent.keyCode;
+  node.dispatchEvent(fixedEvent);
+  return fixedEvent;
+}
 
 // eslint-disable-next-line mocha/no-setup-in-describe
 configs.map((config) => describe(`useRootClose ${config.description}`, () => {
@@ -73,14 +89,14 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
         { attachTo: config.useShadowRoot ? attachTo.shadowRoot : attachTo }
       );
 
-      simulant.fire(
+      fire(
         config.useShadowRoot ? attachTo.shadowRoot.getElementById('my-div') : document.getElementById('my-div'),
         eventName
       );
 
       expect(spy).to.not.have.been.called;
 
-      simulant.fire(document.body, eventName);
+      fire(document.body, eventName);
 
       expect(spy).to.have.been.calledOnce;
 
@@ -94,7 +110,7 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
         { attachTo: config.useShadowRoot ? attachTo.shadowRoot : attachTo }
       );
 
-      simulant.fire(
+      fire(
         config.useShadowRoot ? attachTo.shadowRoot.getElementById('my-div') : document.getElementById('my-div'),
         eventName, 
         { button: 1, }
@@ -102,7 +118,7 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
 
       expect(spy).to.not.have.been.called;
 
-      simulant.fire(document.body, eventName, { button: 1 });
+      fire(document.body, eventName, { button: 1 });
 
       expect(spy).to.not.have.been.called;
     });
@@ -114,14 +130,14 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
         { attachTo: config.useShadowRoot ? attachTo.shadowRoot : attachTo }
       );
 
-      simulant.fire(
+      fire(
         config.useShadowRoot ? attachTo.shadowRoot.getElementById('my-div') : document.getElementById('my-div'),
         eventName
       );
 
       expect(spy).to.not.have.been.called;
 
-      simulant.fire(document.body, eventName);
+      fire(document.body, eventName);
 
       expect(spy).to.not.have.been.called;
     });
@@ -133,7 +149,7 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
         { attachTo: config.useShadowRoot ? attachTo.shadowRoot : attachTo }
       );
 
-      simulant.fire(
+      fire(
         config.useShadowRoot ? attachTo.shadowRoot.getElementById('my-div').children[0] : document.getElementById('my-div').children[0],
         eventName
       );
@@ -173,7 +189,7 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
         { attachTo: config.useShadowRoot ? attachTo.shadowRoot : attachTo }
       );
 
-      simulant.fire(
+      fire(
         config.useShadowRoot ? attachTo.shadowRoot.getElementById('my-div') : document.getElementById('my-div'),
         eventName
       );
@@ -210,7 +226,7 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
 
       expect(spy).to.not.have.been.called;
 
-      simulant.fire(document.body, 'keyup', { keyCode: escapeKeyCode });
+      fire(document.body, 'keyup', { keyCode: escapeKeyCode });
 
       expect(spy).to.have.been.calledOnce;
 
@@ -234,7 +250,7 @@ configs.map((config) => describe(`useRootClose ${config.description}`, () => {
         </Wrapper>,
       );
 
-      simulant.fire(document.body, 'keyup', { keyCode: escapeKeyCode });
+      fire(document.body, 'keyup', { keyCode: escapeKeyCode });
 
       // TODO: Update to match expectations.
       // expect(outerSpy).to.have.not.been.called;
