@@ -118,8 +118,7 @@ function useRootClose(
         !currentTarget ||
         isModifiedEvent(e) ||
         !isLeftClickEvent(e) ||
-        (!!contains(currentTarget, e.target) &&
-          currentTarget.getRootNode() === e.target.getRootNode());
+        !!contains(currentTarget, e.target);
     },
     [ref],
   );
