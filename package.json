@@ -92,7 +92,7 @@
     "babel-eslint": "^10.1.0",
     "babel-plugin-add-module-exports": "^1.0.4",
     "babel-plugin-istanbul": "^6.0.0",
-    "chai": "^4.3.4",
+    "chai": "^4.3.6",
     "cherry-pick": "^0.5.0",
     "cross-env": "^7.0.3",
     "enzyme": "^3.11.0",
